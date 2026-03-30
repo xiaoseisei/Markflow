@@ -59,7 +59,7 @@ function App(): JSX.Element {
   const isDarkTheme = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
 
   useTheme()
-  useKeyboardShortcuts()
+  useKeyboardShortcuts(editorRef)
   useAutoSave(activeTab?.id ?? null, activeTab?.path ?? null, activeTab?.isDirty ? activeTab.content : null)
 
   useEffect(() => {
