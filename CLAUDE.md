@@ -290,6 +290,11 @@ pnpm build
 - **前端默认折叠**：`FileTreeNode` 组件使用 `useState(false)` 避免一次性渲染大量 DOM。
 - **类型定义补充**：在 `src/global.d.ts` 中添加 File System Access API 类型定义（`FileSystemDirectoryHandle.values()` 等）。
 
+### 编辑器修复（2026-03-30 第三次更新）
+- **光标丢失修复**：`MarkdownEditor.tsx` 使用 `useRef` 存储 EditorView 实例，避免因 `value` 变化而销毁重建视图。
+- **Transaction 更新**：外部 value 变化时使用 `view.dispatch()` 而非重建视图。
+- **分离 Theme 处理**：只有 theme 变化时才重建 EditorView。
+
 ---
 
 ## Next Steps

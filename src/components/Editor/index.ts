@@ -1,2 +1,2 @@
 export { EditorToolbar } from './EditorToolbar'
-export { MarkdownEditor } from './MarkdownEditor'
+export { MarkdownEditor, type MarkdownEditorRef } from './MarkdownEditor'

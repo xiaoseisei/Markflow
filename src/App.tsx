@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { Sidebar } from '@/components/Sidebar'
-import { EditorToolbar, MarkdownEditor } from '@/components/Editor'
+import { EditorToolbar, MarkdownEditor, type MarkdownEditorRef } from '@/components/Editor'
 import { ExportDialog } from '@/components/Export'
 import { MarkdownPreview } from '@/components/Preview'
 import { TabBar } from '@/components/Tabs'
@@ -13,6 +13,7 @@ import { useAppStore } from '@/store/appStore'
 import { useUiStore } from '@/store/uiStore'
 import { exportDocument } from '@/utils/export'
 import { renderMarkdown } from '@/utils/markdown'
+import type { EditorCommand } from '@/utils/editorCommands'
 import { getAppConfig } from '@/utils/configAdapter'
 import { pickFile, pickWorkspace, readFile, writeFile, createFile, createDir, renamePath, deletePath, readDirTree } from '@/utils/fsAdapter'
 import { getEnvInfo } from '@/utils/env'
@@ -21,6 +22,17 @@ function App(): JSX.Element {
   // 确认对话框状态
   const [closeConfirmTabId, setCloseConfirmTabId] = useState<string | null>(null)
   const showCloseConfirm = closeConfirmTabId !== null
+
+  // 【新增】编辑器引用，用于执行格式化命令
+  const editorRef = useRef<MarkdownEditorRef>(null)
+
+  /**
+   * 【新增】处理编辑器命令执行
+   * @param command - 要执行的编辑器命令
+   */
+  function handleCommandExecute(command: EditorCommand): void {
+    editorRef.current?.executeCommand(command)
+  }
 
   const workspace = useAppStore((state) => state.workspace)
   const fileTree = useAppStore((state) => state.fileTree)
@@ -395,12 +407,14 @@ function App(): JSX.Element {
           <EditorToolbar
             onChangeViewMode={setViewMode}
             onOpenExport={() => setExportDialogOpen(true)}
+            onExecuteCommand={handleCommandExecute}
             viewMode={viewMode}
           />
           <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-2">
             {viewMode !== 'preview' ? (
               <section className="min-h-0 border-r border-border">
                 <MarkdownEditor
+                  ref={editorRef}
                   onChange={(content) => {
                     if (activeTab) {
                       updateTabContent(activeTab.id, content)
