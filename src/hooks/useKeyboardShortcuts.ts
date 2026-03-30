@@ -198,12 +198,21 @@ export function useKeyboardShortcuts(editorRef: React.RefObject<MarkdownEditorRe
       }
 
       // ========================================
-      // 搜索（暂不支持，显示提示）
+      // 搜索
       // ========================================
 
-      if (matchesShortcut(event, SHORTCUTS.GLOBAL_SEARCH) || matchesShortcut(event, SHORTCUTS.FIND_IN_FILE)) {
+      if (matchesShortcut(event, SHORTCUTS.GLOBAL_SEARCH)) {
         event.preventDefault()
-        pushToast({ id: nanoid(), title: '搜索功能即将推出', variant: 'info' })
+        // 全局搜索：侧边栏搜索面板
+        pushToast({ id: nanoid(), title: '请在侧边栏搜索面板中输入关键词', variant: 'info' })
+        return
+      }
+
+      if (matchesShortcut(event, SHORTCUTS.FIND_IN_FILE)) {
+        event.preventDefault()
+        // 当前文件搜索：聚焦到编辑器
+        editorRef.current?.focus()
+        pushToast({ id: nanoid(), title: '当前文件搜索功能即将推出', variant: 'info' })
         return
       }
 

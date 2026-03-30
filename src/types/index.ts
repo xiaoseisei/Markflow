@@ -49,6 +49,40 @@ export interface FileChangedEvent {
   oldPath?: string
 }
 
+/**
+ * 搜索结果项
+ */
+export interface SearchResult {
+  /** 文件路径 */
+  path: string
+  /** 文件名 */
+  fileName: string
+  /** 匹配的行号（从 1 开始） */
+  line: number
+  /** 匹配的行内容 */
+  content: string
+  /** 匹配的文本 */
+  match: string
+  /** 匹配在行中的起始位置 */
+  matchStart: number
+  /** 匹配在行中的结束位置 */
+  matchEnd: number
+}
+
+/**
+ * 搜索结果汇总
+ */
+export interface SearchResultSummary {
+  /** 文件路径 */
+  path: string
+  /** 文件名 */
+  fileName: string
+  /** 该文件的匹配数量 */
+  count: number
+  /** 该文件的搜索结果列表 */
+  results: SearchResult[]
+}
+
 export interface AppConfig {
   lastWorkspace: string | null
   lastOpenedTabs: string[]

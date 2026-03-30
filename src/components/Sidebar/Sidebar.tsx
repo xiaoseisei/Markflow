@@ -168,7 +168,7 @@ export const Sidebar = memo(function Sidebar({
         </p>
       </div>
       <div className="border-b border-border p-3">
-        <SearchPanel />
+        <SearchPanel nodes={nodes} onOpenFile={onOpenFile} />
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3">
         {nodes.length > 0 ? (
