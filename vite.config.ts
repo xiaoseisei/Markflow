@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 import path from 'node:path'
 
 export default defineConfig({
-  base: './',
+  // GitHub Pages 部署路径：/Markflow/
+  base: '/Markflow/',
   plugins: [react()],
   resolve: {
     alias: {
