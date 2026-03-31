@@ -16,6 +16,7 @@ import { useUiStore } from '@/store/uiStore'
 import { exportDocument } from '@/utils/export'
 import { renderMarkdown } from '@/utils/markdown'
 import type { EditorCommand } from '@/utils/editorCommands'
+import type { ExportConfig } from '@/types'
 import { getAppConfig } from '@/utils/configAdapter'
 import { pickFile, pickWorkspace, readFile, writeFile, createFile, createDir, renamePath, deletePath, readDirTree } from '@/utils/fsAdapter'
 import { getEnvInfo } from '@/utils/env'
@@ -140,7 +141,7 @@ function App(): JSX.Element {
     }
   }
 
-  async function handleExport(config: { format: 'pdf' | 'html' | 'markdown'; paperSize: string; orientation: string; cssTheme: string }): Promise<void> {
+  async function handleExport(config: ExportConfig): Promise<void> {
     if (!activeTab) {
       pushToast({ id: nanoid(), title: '没有可导出的文件', variant: 'info' })
       return

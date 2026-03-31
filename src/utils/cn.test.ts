@@ -41,7 +41,8 @@ describe('cn 工具函数 - 完整测试套件', () => {
     })
 
     it('处理 null 和 undefined', () => {
-      expect(cn('base', null && 'null-class', undefined && 'undefined-class')).toBe('base')
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      expect(cn('base', null as any, undefined as any)).toBe('base')
     })
 
     it('处理 0 和 falsy 数值', () => {

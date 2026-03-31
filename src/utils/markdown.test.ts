@@ -91,7 +91,7 @@ describe('renderMarkdown - 增强测试套件', () => {
     })
 
     it('允许安全的 KaTeX 标签', () => {
-      const result = renderMarkdown('$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$')
+      renderMarkdown('$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$')
       // KaTeX 处理后应该包含 math 标签（通过 ADD_TAGS 允许）
       // 但原始输入不应该被作为 script 执行
     })

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MarkdownPreview } from '@/components/Preview/MarkdownPreview'
 
@@ -26,7 +26,7 @@ describe('MarkdownPreview 组件 - 完整测试套件', () => {
     it('渲染纯文本', () => {
       const html = 'Plain text content'
 
-      const { container } = render(<MarkdownPreview html={html} />)
+      render(<MarkdownPreview html={html} />)
 
       expect(screen.getByText('Plain text content')).toBeInTheDocument()
     })
@@ -119,8 +119,8 @@ describe('MarkdownPreview 组件 - 完整测试套件', () => {
 
       const checkboxes = container.querySelectorAll('input[type="checkbox"]')
       expect(checkboxes).toHaveLength(2)
-      expect(checkboxes[0]?.checked).toBe(true)
-      expect(checkboxes[1]?.checked).toBe(false)
+      expect((checkboxes[0] as HTMLInputElement)?.checked).toBe(true)
+      expect((checkboxes[1] as HTMLInputElement)?.checked).toBe(false)
     })
   })
 
@@ -310,7 +310,7 @@ describe('MarkdownPreview 组件 - 完整测试套件', () => {
         </ul>
       `
 
-      const { container } = render(<MarkdownPreview html={typicalHtml} />)
+      render(<MarkdownPreview html={typicalHtml} />)
 
       expect(screen.getByText('Document Title')).toBeInTheDocument()
       expect(screen.getByText(/This is a paragraph/)).toBeInTheDocument()

@@ -134,7 +134,7 @@ describe('FileTree 组件 - 完整测试套件', () => {
       ]
       const handleOpenFile = vi.fn()
 
-      const { container } = render(
+      render(
         <FileTree nodes={nodes} activePath={null} onOpenFile={handleOpenFile} />
       )
 
