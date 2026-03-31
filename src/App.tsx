@@ -408,11 +408,11 @@ function App(): JSX.Element {
               <MarkdownEditor
                 key={activeTab?.id}
                 ref={editorRef}
-                onChange={(content) => {
-                  if (activeTab) {
-                    updateTabContent(activeTab.id, content)
+                onChange={useCallback((content: string) => {
+                  if (activeTabId) {
+                    updateTabContent(activeTabId, content)
                   }
-                }}
+                }, [activeTabId, updateTabContent])}
                 onSave={() => {
                   void handleSave()
                 }}
