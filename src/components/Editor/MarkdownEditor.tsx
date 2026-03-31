@@ -32,11 +32,10 @@ export interface MarkdownEditorRef {
 /**
  * MarkdownEditor 组件
  *
- * 【实现思路】
- * - 使用 useImperativeHandle 暴露命令执行方法
- * - 使用 useRef 存储 EditorView 实例，避免因 value 变化而销毁重建
- * - 外部 value 变化时使用 transaction 更新，而非重建视图
- * - theme 变化时才重建视图
+ * 【方案 B：CSS 动态变量换肤】
+ * - 不在主题切换时销毁重建 EditorView
+ * - 通过 CSS 变量和 .dark 类控制主题
+ * - 确保 React 层面没有任何 Props 和 State 变动
  */
 export const MarkdownEditor = memo(
   forwardRef<MarkdownEditorRef, MarkdownEditorProps>(function MarkdownEditor(
@@ -44,19 +43,12 @@ export const MarkdownEditor = memo(
     ref,
   ) {
     const [container, setContainer] = useState<HTMLDivElement | null>(null)
-    // 【关键修复】使用 ref 存储 view 实例，避免每次渲染都重新创建
     const viewRef = useRef<EditorView | null>(null)
-    // 【关键修复】使用 ref 存储上一次的 value，用于检测外部变化
     const prevValueRef = useRef<string>(value)
+    const prevThemeRef = useRef<'light' | 'dark'>(theme)
 
     /**
-     * 【新增】执行编辑器命令
-     *
-     * 【实现思路】
-     * - 获取当前选中的文本
-     * - 根据命令类型格式化文本
-     * - 使用 transaction 替换选中文本
-     * - 调整光标位置到合适位置
+     * 执行编辑器命令
      */
     const executeCommand = (command: EditorCommand): void => {
       const view = viewRef.current
@@ -68,14 +60,12 @@ export const MarkdownEditor = memo(
       const selectedText = view.state.sliceDoc(from, to)
       const formattedText = formatText(command, selectedText)
 
-      // 使用 transaction 替换文本
       const transaction = view.state.update({
         changes: {
           from,
           to,
           insert: formattedText,
         },
-        // 调整光标位置
         selection: {
           anchor: from + getCursorOffset(command, selectedText),
         },
@@ -86,7 +76,7 @@ export const MarkdownEditor = memo(
     }
 
     /**
-     * 【新增】暴露方法给父组件
+     * 暴露方法给父组件
      */
     useImperativeHandle(
       ref,
@@ -99,6 +89,28 @@ export const MarkdownEditor = memo(
       [],
     )
 
+    /**
+     * 【方案 B 核心】通过 CSS 类名控制主题，不重建 EditorView
+     */
+    useEffect(() => {
+      if (!container || !viewRef.current) {
+        return
+      }
+
+      // 切换容器的 dark 类，CodeMirror 通过 CSS 变量响应主题变化
+      if (theme === 'dark') {
+        container.classList.add('dark')
+      } else {
+        container.classList.remove('dark')
+      }
+
+      prevThemeRef.current = theme
+    }, [theme, container])
+
+    /**
+     * 【方案 B 核心】稳定的 extensions，不包含 theme 相关
+     * 使用 CSS 变量让 CodeMirror 响应外部主题变化
+     */
     const extensions = [
       createMarkdownSyntaxExtension(),
       lineNumbers(),
@@ -123,31 +135,87 @@ export const MarkdownEditor = memo(
         if (update.docChanged) {
           const newContent = update.state.doc.toString()
           onChange(newContent)
-          // 【关键修复】更新 ref，避免循环更新
           prevValueRef.current = newContent
         }
       }),
+      /**
+       * 【方案 B 核心】使用 CSS 变量定义主题
+       * 所有颜色都通过 CSS 变量引用，支持 .dark 类切换
+       */
       EditorView.theme({
-        '&': { height: '100%', fontSize: '14px' },
-        '.cm-scroller': { overflow: 'auto', fontFamily: 'var(--editor-font-family)' },
+        '&': {
+          height: '100%',
+          fontSize: '14px',
+          backgroundColor: 'var(--cm-background)',
+          color: 'var(--cm-color)',
+        },
+        '.cm-scroller': {
+          overflow: 'auto',
+          fontFamily: 'var(--editor-font-family)',
+          backgroundColor: 'var(--cm-background)',
+        },
+        '.cm-content': {
+          caretColor: 'var(--cm-caret)',
+        },
+        '.cm-cursor, .cm-dropCursor': {
+          borderLeftColor: 'var(--cm-caret)',
+        },
+        '.cm-selectionBackground': {
+          background: 'var(--cm-selection-bg)',
+        },
+        '.cm-focused': {
+          outline: 'none',
+        },
+        '.cm-line': {
+          borderColor: 'var(--cm-border)',
+        },
+        '.cm-gutters': {
+          backgroundColor: 'var(--cm-gutter-bg)',
+          color: 'var(--cm-gutter-color)',
+          border: 'none',
+        },
+        '.cm-activeLineGutter': {
+          backgroundColor: 'var(--cm-gutter-active-bg)',
+          color: 'var(--cm-gutter-active-color)',
+        },
+        '.cm-lineNumbers .cm-gutterElement': {
+          color: 'var(--cm-line-number-color)',
+        },
+        '.cm-activeLine': {
+          backgroundColor: 'var(--cm-active-line-bg)',
+        },
+        '.cm-selectionMatch': {
+          backgroundColor: 'var(--cm-selection-match-bg)',
+        },
+        '.cm-matchingBracket, .cm-nonmatchingBracket': {
+          backgroundColor: 'var(--cm-bracket-bg)',
+          color: 'var(--cm-bracket-color)',
+        },
+        // 语法高亮颜色
+        '&.cm-focused .cm-selectionBackground, ::selection': {
+          backgroundColor: 'var(--cm-selection-bg)',
+        },
+        '.cm-searchMatch': {
+          backgroundColor: 'var(--cm-search-bg)',
+          color: 'var(--cm-search-color)',
+        },
+        '.cm-searchMatch.cm-searchMatch-selected': {
+          backgroundColor: 'var(--cm-search-selected-bg)',
+          color: 'var(--cm-search-selected-color)',
+        },
       }),
-      theme === 'dark' ? oneDark : [],
+      // 同时应用 oneDark 作为暗色主题的基础（通过 CSS 变量覆盖）
+      oneDark,
     ]
 
     /**
-     * 【核心修复】初始化 EditorView
-     *
-     * 【实现思路】
-     * - 只在 container 首次可用时创建 EditorView
-     * - 使用 ref 存储 view 实例，避免依赖闭包
-     * - 移除 value 依赖，防止内容变化时重建 view
+     * 初始化 EditorView（只执行一次）
      */
     useEffect(() => {
       if (!container) {
         return
       }
 
-      // 如果已经存在 view，不重复创建
       if (viewRef.current) {
         return
       }
@@ -156,7 +224,6 @@ export const MarkdownEditor = memo(
         doc: value,
         extensions: [
           ...extensions,
-          // 【新增】在 view 上存储一个标记，用于后续识别
           EditorView.editorAttributes.of({ 'data-code-mirror': 'true' }),
         ],
       })
@@ -169,21 +236,20 @@ export const MarkdownEditor = memo(
       viewRef.current = view
       prevValueRef.current = value
 
+      // 初始化主题类
+      if (theme === 'dark') {
+        container.classList.add('dark')
+      }
+
       return () => {
         view.destroy()
         viewRef.current = null
       }
-      // 【关键】只依赖 container，不依赖 value 和 extensions
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [container])
 
     /**
-     * 【新增】处理外部 value 变化
-     *
-     * 【实现思路】
-     * - 当 value 从外部变化时（如切换标签、加载文件）
-     * - 使用 transaction 更新文档内容，而不是重建 view
-     * - 检查 value 是否真的变化，避免循环更新
+     * 处理外部 value 变化（如切换标签）
      */
     useEffect(() => {
       const view = viewRef.current
@@ -191,12 +257,10 @@ export const MarkdownEditor = memo(
         return
       }
 
-      // 如果内容相同，跳过更新
       if (value === prevValueRef.current) {
         return
       }
 
-      // 【关键修复】使用 transaction 更新内容，而不是重建 view
       const transaction = view.state.update({
         changes: {
           from: 0,
@@ -206,49 +270,8 @@ export const MarkdownEditor = memo(
       })
 
       view.dispatch(transaction)
-      prevValueRef.current = value
+      prevValueRef.current = view.state.doc.toString()
     }, [value])
-
-    /**
-     * 【新增】处理 theme 变化
-     *
-     * 【实现思路】
-     * - theme 变化时需要重建 view（因为 oneDark 扩展需要在初始化时应用）
-     * - 先销毁旧 view，再创建新 view
-     */
-    useEffect(() => {
-      const view = viewRef.current
-      if (!view || !container) {
-        return
-      }
-
-      // 销毁旧 view
-      view.destroy()
-      viewRef.current = null
-
-      // 创建新 view
-      const state = EditorState.create({
-        doc: prevValueRef.current, // 使用当前内容
-        extensions: [
-          ...extensions,
-          EditorView.editorAttributes.of({ 'data-code-mirror': 'true' }),
-        ],
-      })
-
-      const newView = new EditorView({
-        state,
-        parent: container,
-      })
-
-      viewRef.current = newView
-
-      return () => {
-        newView.destroy()
-        viewRef.current = null
-      }
-      // 【关键】只依赖 theme 和 container
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [theme, container])
 
     return <div className={cn('h-full min-h-0 overflow-hidden', className)} ref={setContainer} />
   }),

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { Sidebar } from '@/components/Sidebar'
 import { EditorToolbar, MarkdownEditor, type MarkdownEditorRef } from '@/components/Editor'
@@ -6,6 +6,8 @@ import { ExportDialog } from '@/components/Export'
 import { MarkdownPreview } from '@/components/Preview'
 import { TabBar } from '@/components/Tabs'
 import { Dialog, ToastViewport } from '@/components/ui'
+import { Layout, SidebarHeader, StatusBar } from '@/components/Layout/Layout'
+import { Header } from '@/components/Layout/Header'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useTheme } from '@/hooks/useTheme'
@@ -23,13 +25,9 @@ function App(): JSX.Element {
   const [closeConfirmTabId, setCloseConfirmTabId] = useState<string | null>(null)
   const showCloseConfirm = closeConfirmTabId !== null
 
-  // 【新增】编辑器引用，用于执行格式化命令
+  // 编辑器引用，用于执行格式化命令
   const editorRef = useRef<MarkdownEditorRef>(null)
 
-  /**
-   * 【新增】处理编辑器命令执行
-   * @param command - 要执行的编辑器命令
-   */
   function handleCommandExecute(command: EditorCommand): void {
     editorRef.current?.executeCommand(command)
   }
@@ -50,13 +48,15 @@ function App(): JSX.Element {
   const markTabSaved = useAppStore((state) => state.markTabSaved)
   const setViewMode = useAppStore((state) => state.setViewMode)
   const setTheme = useAppStore((state) => state.setTheme)
+  const toggleSidebar = useAppStore((state) => state.toggleSidebar)
   const exportDialogOpen = useUiStore((state) => state.exportDialogOpen)
   const setExportDialogOpen = useUiStore((state) => state.setExportDialogOpen)
   const pushToast = useUiStore((state) => state.pushToast)
 
   const activeTab = openedTabs.find((tab) => tab.id === activeTabId) ?? null
-  const previewHtml = useMemo(() => renderMarkdown(activeTab?.content ?? '# 欢迎使用 MarkFlow'), [activeTab?.content])
+  const previewHtml = useMemo(() => renderMarkdown(activeTab?.content ?? ''), [activeTab?.content])
   const isDarkTheme = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const isContentEmpty = !activeTab?.content || activeTab.content.trim() === ''
 
   useTheme()
   useKeyboardShortcuts(editorRef)
@@ -72,13 +72,11 @@ function App(): JSX.Element {
           setTheme(config.theme)
         }
         if (config.lastWorkspace && env.isTauri) {
-          // 只在 Tauri 环境自动恢复工作区
           const nodes = await readDirTree(config.lastWorkspace)
           setWorkspace(config.lastWorkspace)
           setFileTree(nodes)
         }
 
-        // 根据环境显示欢迎信息
         if (env.isBrowser) {
           pushToast({
             id: nanoid(),
@@ -99,13 +97,12 @@ function App(): JSX.Element {
     try {
       const result = await pickWorkspace()
       if (!result) {
-        return // 用户取消
+        return
       }
       const { path, nodes } = result
       setWorkspace(path)
       setFileTree(nodes)
 
-      // 保存配置
       await getAppConfig().then(config => {
         return import('@/utils/configAdapter').then(m => m.saveAppConfig({ ...config, lastWorkspace: path }))
       })
@@ -121,7 +118,7 @@ function App(): JSX.Element {
     try {
       const result = await pickFile()
       if (!result) {
-        return // 用户取消
+        return
       }
       const { path, content, title } = result
       openTab({ path, title, content })
@@ -143,10 +140,6 @@ function App(): JSX.Element {
     }
   }
 
-  /**
-   * 导出文档
-   * - 支持多种格式：PDF、HTML、Markdown
-   */
   async function handleExport(config: { format: 'pdf' | 'html' | 'markdown'; paperSize: string; orientation: string; cssTheme: string }): Promise<void> {
     if (!activeTab) {
       pushToast({ id: nanoid(), title: '没有可导出的文件', variant: 'info' })
@@ -159,18 +152,12 @@ function App(): JSX.Element {
       setExportDialogOpen(false)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      // 用户取消不算错误
       if (message !== 'AbortError' && !message.includes('取消')) {
         pushToast({ id: nanoid(), title: `导出失败：${message}`, variant: 'error' })
       }
     }
   }
 
-  /**
-   * 手动保存当前文件
-   * - 快捷键：Ctrl+S / Cmd+S
-   * - 保存成功后显示 Toast 提示
-   */
   async function handleSave(): Promise<void> {
     if (!activeTab || !activeTab.path) {
       pushToast({ id: nanoid(), title: '没有可保存的文件', variant: 'info' })
@@ -187,11 +174,6 @@ function App(): JSX.Element {
     }
   }
 
-  /**
-   * 处理关闭标签
-   * - 如果标签有未保存更改，显示确认对话框
-   * - 否则直接关闭
-   */
   function handleCloseTab(tabId: string): void {
     const tab = openedTabs.find((t) => t.id === tabId)
     if (tab?.isDirty) {
@@ -201,9 +183,6 @@ function App(): JSX.Element {
     }
   }
 
-  /**
-   * 确认关闭未保存的标签
-   */
   function confirmCloseTab(): void {
     if (closeConfirmTabId) {
       closeTab(closeConfirmTabId)
@@ -211,16 +190,10 @@ function App(): JSX.Element {
     }
   }
 
-  /**
-   * 取消关闭未保存的标签
-   */
   function cancelCloseTab(): void {
     setCloseConfirmTabId(null)
   }
 
-  /**
-   * 刷新文件树
-   */
   async function handleRefreshFileTree(): Promise<void> {
     if (!workspace) {
       return
@@ -235,9 +208,6 @@ function App(): JSX.Element {
     }
   }
 
-  /**
-   * 创建新文件
-   */
   async function handleCreateFile(parentPath: string): Promise<void> {
     const fileName = window.prompt('输入文件名（如：note.md）')
     if (!fileName) {
@@ -248,7 +218,6 @@ function App(): JSX.Element {
     try {
       await createFile(newPath)
       await handleRefreshFileTree()
-      // 自动打开新创建的文件
       await handleOpenFile(newPath)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
@@ -256,9 +225,6 @@ function App(): JSX.Element {
     }
   }
 
-  /**
-   * 创建新文件夹
-   */
   async function handleCreateFolder(parentPath: string): Promise<void> {
     const folderName = window.prompt('输入文件夹名')
     if (!folderName) {
@@ -275,11 +241,7 @@ function App(): JSX.Element {
     }
   }
 
-  /**
-   * 重命名文件或文件夹
-   */
   async function handleRename(oldPath: string, newName: string): Promise<void> {
-    // 构建新路径
     const pathParts = oldPath.split(/[/\\]/)
     pathParts[pathParts.length - 1] = newName
     const newPath = pathParts.join('/')
@@ -292,7 +254,6 @@ function App(): JSX.Element {
       await renamePath(oldPath, newPath)
       await handleRefreshFileTree()
 
-      // 如果重命名的是当前打开的文件，更新标签
       const renamedTab = openedTabs.find((tab) => tab.path === oldPath)
       if (renamedTab) {
         closeTab(renamedTab.id)
@@ -304,21 +265,16 @@ function App(): JSX.Element {
     }
   }
 
-  /**
-   * 删除文件或文件夹
-   */
   async function handleDelete(path: string): Promise<void> {
     try {
       await deletePath(path)
       await handleRefreshFileTree()
 
-      // 关闭被删除文件的标签
       const deletedTab = openedTabs.find((tab) => tab.path === path)
       if (deletedTab) {
         closeTab(deletedTab.id)
       }
 
-      // 检查是否有子文件被删除（对于文件夹）
       const affectedTabs = openedTabs.filter((tab) => tab.path.startsWith(path + '/'))
       affectedTabs.forEach((tab) => closeTab(tab.id))
 
@@ -329,9 +285,6 @@ function App(): JSX.Element {
     }
   }
 
-  /**
-   * 复制路径到剪贴板
-   */
   async function handleCopyPath(path: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(path)
@@ -341,100 +294,141 @@ function App(): JSX.Element {
     }
   }
 
-  return (
-    <div className="flex h-full flex-col bg-background text-foreground">
-      <header className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div>
-          <h1 className="text-lg font-semibold">MarkFlow</h1>
-          <p className="text-xs text-muted-foreground">
-            {getEnvInfo().isTauri ? '桌面版' : '网页版 (File System Access API)'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="rounded-md border border-border px-3 py-2 text-sm"
-            onClick={() => setTheme(isDarkTheme ? 'light' : 'dark')}
-            type="button"
-          >
-            {isDarkTheme ? '切换到亮色' : '切换到暗色'}
-          </button>
-        </div>
-      </header>
+  const handleOpenFileCallback = useCallback((path: string) => {
+    void handleOpenFile(path)
+  }, [])
 
-      <TabBar
-        activeTabId={activeTabId}
-        onCloseTab={handleCloseTab}
-        onSelectTab={setActiveTab}
-        tabs={openedTabs}
+  const handlePickWorkspaceCallback = useCallback(() => {
+    void handlePickWorkspace()
+  }, [])
+
+  const handlePickFileCallback = useCallback(() => {
+    void handlePickFile()
+  }, [])
+
+  const handleRefreshFileTreeCallback = useCallback(() => {
+    void handleRefreshFileTree()
+  }, [])
+
+  const handleCreateFileCallback = useCallback((path: string) => {
+    void handleCreateFile(path)
+  }, [])
+
+  const handleCreateFolderCallback = useCallback((path: string) => {
+    void handleCreateFolder(path)
+  }, [])
+
+  const handleRenameCallback = useCallback((path: string, name: string) => {
+    void handleRename(path, name)
+  }, [])
+
+  const handleDeleteCallback = useCallback((path: string) => {
+    void handleDelete(path)
+  }, [])
+
+  const handleCopyPathCallback = useCallback((path: string) => {
+    void handleCopyPath(path)
+  }, [])
+
+  // 主题切换
+  const handleToggleTheme = useCallback(() => {
+    setTheme(isDarkTheme ? 'light' : 'dark')
+  }, [isDarkTheme, setTheme])
+
+  // 侧边栏切换
+  const handleToggleSidebar = useCallback(() => {
+    toggleSidebar?.()
+  }, [toggleSidebar])
+
+  return (
+    <div className="flex h-full flex-col bg-stone-50 text-foreground">
+      {/* 顶部 Header */}
+      <Header
+        workspace={workspace}
+        activeFilePath={activeTab?.path ?? null}
+        isDarkTheme={isDarkTheme}
+        onToggleTheme={handleToggleTheme}
+        sidebarVisible={sidebarVisible}
+        onToggleSidebar={handleToggleSidebar}
       />
 
-      <div className="flex min-h-0 flex-1">
-        <Sidebar
-          activePath={activeTab?.path ?? null}
-          nodes={fileTree}
-          onOpenFile={(path) => {
-            void handleOpenFile(path)
-          }}
-          onPickWorkspace={() => {
-            void handlePickWorkspace()
-          }}
-          onPickFile={() => {
-            void handlePickFile()
-          }}
-          onRefreshFileTree={() => {
-            void handleRefreshFileTree()
-          }}
-          onCreateFile={(path) => {
-            void handleCreateFile(path)
-          }}
-          onCreateFolder={(path) => {
-            void handleCreateFolder(path)
-          }}
-          onRename={(path, name) => {
-            void handleRename(path, name)
-          }}
-          onDelete={(path) => {
-            void handleDelete(path)
-          }}
-          onCopyPath={(path) => {
-            void handleCopyPath(path)
-          }}
-          visible={sidebarVisible}
-          workspace={workspace}
+      {/* 主内容卡片 */}
+      <div className="m-2 flex flex-1 flex-col overflow-hidden rounded-xl border border-[0.5px] border-slate-200/80 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-900">
+        {/* 标签栏 */}
+        <TabBar
+          activeTabId={activeTabId}
+          onCloseTab={handleCloseTab}
+          onSelectTab={setActiveTab}
+          tabs={openedTabs}
         />
 
-        <main className="flex min-h-0 flex-1 flex-col">
-          <EditorToolbar
-            onChangeViewMode={setViewMode}
-            onOpenExport={() => setExportDialogOpen(true)}
-            onExecuteCommand={handleCommandExecute}
-            viewMode={viewMode}
-          />
-          <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden md:grid-cols-2">
-            {viewMode !== 'preview' ? (
-              <section className="min-h-0 border-r border-border">
-                <MarkdownEditor
-                  ref={editorRef}
-                  onChange={(content) => {
-                    if (activeTab) {
-                      updateTabContent(activeTab.id, content)
-                    }
-                  }}
-                  onSave={() => {
-                    void handleSave()
-                  }}
-                  theme={isDarkTheme ? 'dark' : 'light'}
-                  value={activeTab?.content ?? '# 选择一个 Markdown 文件开始编辑'}
+        {/* 三栏布局 */}
+        <Layout
+          sidebarVisible={sidebarVisible}
+          viewMode={viewMode}
+          toolbar={
+            <EditorToolbar
+              onChangeViewMode={setViewMode}
+              onCompile={() => setExportDialogOpen(true)}
+              onExecuteCommand={handleCommandExecute}
+              viewMode={viewMode}
+            />
+          }
+          sidebar={
+            <>
+              <SidebarHeader
+                onRefreshFileTree={handleRefreshFileTreeCallback}
+                onCreateFile={handleCreateFileCallback}
+                onCreateFolder={handleCreateFolderCallback}
+                workspace={workspace}
+              />
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <Sidebar
+                  activePath={activeTab?.path ?? null}
+                  nodes={fileTree}
+                  onOpenFile={handleOpenFileCallback}
+                  onPickWorkspace={handlePickWorkspaceCallback}
+                  onPickFile={handlePickFileCallback}
+                  onRefreshFileTree={handleRefreshFileTreeCallback}
+                  onCreateFile={handleCreateFileCallback}
+                  onCreateFolder={handleCreateFolderCallback}
+                  onRename={handleRenameCallback}
+                  onDelete={handleDeleteCallback}
+                  onCopyPath={handleCopyPathCallback}
+                  visible={true}
+                  workspace={workspace}
+                  isDarkMode={true}
                 />
-              </section>
-            ) : null}
-            {viewMode !== 'editor' ? (
-              <section className="min-h-0 overflow-hidden">
-                <MarkdownPreview html={previewHtml} />
-              </section>
-            ) : null}
-          </div>
-        </main>
+              </div>
+            </>
+          }
+          editor={
+            <div className="flex-1 overflow-hidden">
+              <MarkdownEditor
+                ref={editorRef}
+                onChange={(content) => {
+                  if (activeTab) {
+                    updateTabContent(activeTab.id, content)
+                  }
+                }}
+                onSave={() => {
+                  void handleSave()
+                }}
+                theme={isDarkTheme ? 'dark' : 'light'}
+                value={activeTab?.content ?? ''}
+              />
+            </div>
+          }
+          preview={
+            <MarkdownPreview html={previewHtml} isEmpty={isContentEmpty} />
+          }
+          statusBar={
+            <StatusBar
+              content={activeTab?.content ?? ''}
+              lineCount={(activeTab?.content ?? '').split('\n').length}
+            />
+          }
+        />
       </div>
 
       <ExportDialog

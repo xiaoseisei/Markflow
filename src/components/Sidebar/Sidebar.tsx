@@ -1,15 +1,16 @@
 import { memo, useState } from 'react'
-import { Button } from '@/components/ui'
 import { FileTree } from '@/components/Sidebar/FileTree'
 import { FileContextMenu, type ContextMenuPosition, type ContextMenuItem } from '@/components/Sidebar/FileContextMenu'
-import { SearchPanel } from '@/components/Sidebar/SearchPanel'
 import type { FileNode } from '@/types'
+import { cn } from '@/utils/cn'
+import { FolderOpen } from 'lucide-react'
 
 interface SidebarProps {
   workspace: string | null
   nodes: FileNode[]
   activePath: string | null
   visible: boolean
+  isDarkMode?: boolean
   onPickWorkspace: () => void
   onPickFile?: () => void
   onOpenFile: (path: string) => void
@@ -26,10 +27,9 @@ export const Sidebar = memo(function Sidebar({
   nodes,
   activePath,
   visible,
+  isDarkMode = false,
   onPickWorkspace,
-  onPickFile,
   onOpenFile,
-  onRefreshFileTree,
   onCreateFile,
   onCreateFolder,
   onRename,
@@ -57,7 +57,6 @@ export const Sidebar = memo(function Sidebar({
       },
     ]
 
-    // 文件和文件夹都可以重命名、复制路径
     items.push(
       {
         key: 'rename',
@@ -84,7 +83,6 @@ export const Sidebar = memo(function Sidebar({
       }
     )
 
-    // 删除操作
     items.push({
       key: 'delete',
       label: '删除',
@@ -100,7 +98,6 @@ export const Sidebar = memo(function Sidebar({
       variant: 'destructive',
     })
 
-    // 文件夹可以创建子项
     if (node.type === 'dir') {
       items.splice(1, 0, {
         key: 'separator',
@@ -142,44 +139,61 @@ export const Sidebar = memo(function Sidebar({
     return null
   }
 
+  // 深色模式样式
+  const borderClass = isDarkMode ? 'border-slate-700' : 'border-slate-200'
+
   return (
-    <aside className="flex h-full w-[var(--sidebar-width)] flex-col border-r border-border bg-card/50">
-      <div className="border-b border-border px-4 py-3">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold">工作区</h2>
-          <div className="flex gap-1">
-            {onPickFile && (
-              <Button onClick={onPickFile} size="sm" variant="ghost">
-                打开文件
-              </Button>
-            )}
-            <Button onClick={onPickWorkspace} size="sm" variant="outline">
-              打开工作区
-            </Button>
-            {onRefreshFileTree && (
-              <Button onClick={onRefreshFileTree} size="sm" variant="ghost" title="刷新文件树">
-                🔄
-              </Button>
-            )}
-          </div>
+    <aside className={cn('flex h-full flex-col', isDarkMode ? 'bg-slate-900 text-slate-100' : 'bg-slate-900 text-slate-100')}>
+      {/* 搜索面板 - 始终显示 */}
+      <div className={cn('border-b p-3', borderClass)}>
+        <div
+          className={cn(
+            'flex cursor-pointer items-center gap-2 rounded-md px-3 py-2',
+            'border border-dashed border-slate-600 transition-colors',
+            'hover:border-slate-500 hover:bg-slate-800',
+          )}
+          onClick={onPickWorkspace}
+          onKeyDown={(e) => e.key === 'Enter' && onPickWorkspace()}
+          role="button"
+          tabIndex={0}
+        >
+          <FolderOpen className="size-4 text-slate-500" />
+          <span className="text-[13px] text-slate-400">
+            {workspace ? '点击更换工作区' : '选择工作区文件夹'}
+          </span>
         </div>
-        <p className="truncate text-xs text-muted-foreground">
-          {workspace ?? '尚未选择工作区'}
-        </p>
       </div>
-      <div className="border-b border-border p-3">
-        <SearchPanel nodes={nodes} onOpenFile={onOpenFile} />
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto p-3">
+
+      {/* 文件树 */}
+      <div className="min-h-0 flex-1 overflow-auto p-2">
         {nodes.length > 0 ? (
           <FileTree
             activePath={activePath}
             nodes={nodes}
             onOpenFile={onOpenFile}
             onContextMenu={handleContextMenu}
+            isDarkMode={isDarkMode}
           />
         ) : (
-          <p className="text-sm text-muted-foreground">请选择工作区后加载文件树。</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <FolderOpen className="mb-3 size-10 text-slate-600" />
+            <p className="text-[13px] text-slate-500">
+              {workspace ? '工作区为空' : '选择工作区以开始'}
+            </p>
+            {workspace && onCreateFile && (
+              <button
+                className={cn(
+                  'mt-3 rounded-md px-3 py-1.5 text-[12px]',
+                  'bg-slate-800 text-slate-300',
+                  'transition-colors hover:bg-slate-700',
+                )}
+                onClick={() => onCreateFile(workspace)}
+                type="button"
+              >
+                新建文件
+              </button>
+            )}
+          </div>
         )}
       </div>
 

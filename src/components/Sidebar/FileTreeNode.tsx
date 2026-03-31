@@ -3,12 +3,20 @@ import type { FileNode } from '@/types'
 import { cn } from '@/utils/cn'
 import { readDirChildren } from '@/utils/fsAdapter'
 import type { ContextMenuPosition, ContextMenuItem } from './FileContextMenu'
+import {
+  ChevronRight,
+  File,
+  Folder,
+  FolderOpen,
+  Loader2,
+} from 'lucide-react'
 
 interface FileTreeNodeProps {
   node: FileNode
   activePath: string | null
   onOpenFile: (path: string) => void
   onContextMenu?: (position: ContextMenuPosition, node: FileNode) => ContextMenuItem[]
+  isDarkMode?: boolean
 }
 
 export const FileTreeNode = memo(function FileTreeNode({
@@ -16,8 +24,9 @@ export const FileTreeNode = memo(function FileTreeNode({
   activePath,
   onOpenFile,
   onContextMenu,
+  isDarkMode = false,
 }: FileTreeNodeProps) {
-  // 【关键修改】默认折叠状态，避免一次性渲染所有节点
+  // 默认折叠状态，避免一次性渲染所有节点
   const [expanded, setExpanded] = useState(false)
   const [loading, setLoading] = useState(false)
   const [children, setChildren] = useState<FileNode[] | null>(node.children ?? null)
@@ -25,33 +34,32 @@ export const FileTreeNode = memo(function FileTreeNode({
   const isDirectory = node.type === 'dir'
   const isActive = node.path === activePath
 
+  // 深色模式样式
+  const hoverClass = isDarkMode ? 'hover:bg-slate-800' : 'hover:bg-slate-100'
+  const activeClass = isDarkMode
+    ? 'bg-slate-700 text-slate-100'
+    : 'bg-slate-100 text-slate-900'
+  const textClass = isDarkMode ? 'text-slate-300' : 'text-slate-600'
+  const iconClass = isDarkMode ? 'text-slate-500' : 'text-slate-400'
+
   /**
-   * 【懒加载核心】展开目录时动态加载子节点
-   *
-   * 【实现思路】
-   * 1. 首次展开时，如果 children 为 null，调用 Tauri 接口加载
-   * 2. 加载完成后缓存到组件 state，避免重复请求
-   * 3. 后续展开/折叠直接使用缓存数据
+   * 懒加载核心：展开目录时动态加载子节点
    */
   const handleToggle = useCallback(async () => {
     if (!isDirectory) return
 
-    // 如果已经加载过子节点，直接切换展开状态
     if (children !== null) {
       setExpanded((value) => !value)
       return
     }
 
-    // 首次展开：懒加载子节点
     setLoading(true)
     try {
       const loadedChildren = await readDirChildren(node.path)
       setChildren(loadedChildren)
       setExpanded(true)
     } catch (error) {
-      // 【防御性编程】加载失败时给出用户友好的提示
       console.error(`加载目录失败: ${node.path}`, error)
-      // TODO: 可以在这里显示 toast 提示用户
     } finally {
       setLoading(false)
     }
@@ -72,8 +80,10 @@ export const FileTreeNode = memo(function FileTreeNode({
     <li>
       <button
         className={cn(
-          'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-accent',
-          isActive && 'bg-accent text-accent-foreground font-medium',
+          'group flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-[13px] transition-colors',
+          hoverClass,
+          isActive && activeClass,
+          !isActive && !hoverClass && textClass,
         )}
         onClick={() => {
           if (isDirectory) {
@@ -86,20 +96,38 @@ export const FileTreeNode = memo(function FileTreeNode({
         style={{ paddingLeft: `${node.depth * 12 + 8}px` }}
         type="button"
       >
-        {/* 【体验优化】加载时显示 loading 图标 */}
-        <span>
-          {isDirectory
-            ? loading
-              ? '⏳' // 加载中
-              : expanded
-                ? '📂' // 已展开
-                : '📁' // 未展开
-            : '📄'}
+        {/* 图标 */}
+        <span className={cn('flex-shrink-0', iconClass)}>
+          {loading ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : isDirectory ? (
+            expanded ? (
+              <FolderOpen className="size-3.5" />
+            ) : (
+              <Folder className="size-3.5" />
+            )
+          ) : (
+            <File className="size-3.5" />
+          )}
         </span>
-        <span className="truncate">{node.name}</span>
+
+        {/* 展开箭头（仅目录） */}
+        {isDirectory && !loading && (
+          <ChevronRight
+            className={cn(
+              'size-3 flex-shrink-0 transition-transform',
+              expanded && 'rotate-90',
+            )}
+          />
+        )}
+
+        {/* 文件名 */}
+        <span className={cn('truncate', isActive ? 'font-medium' : 'font-normal')}>
+          {node.name}
+        </span>
       </button>
       {isDirectory && expanded && children ? (
-        <ul className="mt-1 space-y-1">
+        <ul className="mt-0.5 space-y-0.5">
           {children.map((child) => (
             <FileTreeNode
               activePath={activePath}
@@ -107,6 +135,7 @@ export const FileTreeNode = memo(function FileTreeNode({
               node={child}
               onOpenFile={onOpenFile}
               onContextMenu={onContextMenu}
+              isDarkMode={isDarkMode}
             />
           ))}
         </ul>

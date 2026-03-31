@@ -21,6 +21,27 @@ const browserFileHandles = new Map<string, FileSystemFileHandle>()
 // 浏览器环境下存储目录句柄
 const browserDirHandles = new Map<string, FileSystemDirectoryHandle>()
 
+// 黑名单目录：加载时自动跳过
+const IGNORED_DIRECTORIES = [
+  'node_modules',
+  '.git',
+  '.vscode',
+  '.idea',
+  'dist',
+  'build',
+  'target',
+  '.cache',
+  '.tmp',
+  '.temp',
+  '.DS_Store',
+  'Thumbs.db',
+]
+
+// 判断是否为黑名单目录
+function isIgnoredDirectory(name: string): boolean {
+  return IGNORED_DIRECTORIES.includes(name)
+}
+
 // ============================================================================
 // 统一接口
 // ============================================================================
@@ -156,6 +177,11 @@ async function buildFileTreeFromHandle(
   const nodes: FileNode[] = []
 
   for await (const entry of dirHandle.values()) {
+    // 跳过黑名单目录
+    if (entry.kind === 'directory' && isIgnoredDirectory(entry.name)) {
+      continue
+    }
+
     const path = `${basePath}/${entry.name}`
     // 正确处理文件扩展名：隐藏文件无扩展名，其他文件取最后一个点后的部分
     const ext = entry.name.startsWith('.')

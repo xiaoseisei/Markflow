@@ -7,6 +7,7 @@ interface TabBarProps {
   activeTabId: string | null
   onSelectTab: (tabId: string) => void
   onCloseTab: (tabId: string) => void
+  onNewTab?: () => void
 }
 
 export const TabBar = memo(function TabBar({
@@ -16,7 +17,7 @@ export const TabBar = memo(function TabBar({
   onCloseTab,
 }: TabBarProps) {
   return (
-    <div className="flex min-h-11 items-stretch overflow-auto border-b border-border bg-muted/50">
+    <div className="flex h-9 min-h-9 items-stretch overflow-auto bg-slate-50 dark:bg-slate-800/50">
       {tabs.map((tab) => (
         <Tab
           isActive={tab.id === activeTabId}

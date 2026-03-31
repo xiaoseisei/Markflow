@@ -171,27 +171,5 @@ export const COMMAND_LABELS: Record<EditorCommand, string> = {
   'image': '图片',
 }
 
-/**
- * 命令图标（使用 emoji 或简洁符号）
- */
-export const COMMAND_ICONS: Record<EditorCommand, string> = {
-  'bold': '**B**',
-  'italic': '*I*',
-  'strikethrough': '~~S~~',
-  'heading-1': 'H1',
-  'heading-2': 'H2',
-  'heading-3': 'H3',
-  'heading-4': 'H4',
-  'heading-5': 'H5',
-  'heading-6': 'H6',
-  'heading-clear': '¶',
-  'unordered-list': '•',
-  'ordered-list': '1.',
-  'task-list': '☐',
-  'code-inline': '</>',
-  'code-block': '{ }',
-  'quote': '"',
-  'divider': '—',
-  'link': '🔗',
-  'image': '🖼',
-}
+// 注意：图标已迁移到 EditorToolbar.tsx 中直接使用 lucide-react
+// COMMAND_ICONS 已移除，避免与 lucide-react 组件冲突

@@ -23,6 +23,26 @@
   --radius: 0.75rem;
   --sidebar-width: 260px;
   --editor-font-family: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* CodeMirror 亮色主题变量 */
+  --cm-background: #ffffff;
+  --cm-color: #24292e;
+  --cm-caret: #24292e;
+  --cm-selection-bg: #b4d5fe;
+  --cm-border: #e1e4e8;
+  --cm-gutter-bg: #ffffff;
+  --cm-gutter-color: #959da5;
+  --cm-gutter-active-bg: #f6f8fa;
+  --cm-gutter-active-color: #24292e;
+  --cm-line-number-color: #959da5;
+  --cm-active-line-bg: #f6f8fa;
+  --cm-selection-match-bg: #aff5b4;
+  --cm-bracket-bg: #c8e1ff;
+  --cm-bracket-color: #24292e;
+  --cm-search-bg: #fff5c1;
+  --cm-search-color: #24292e;
+  --cm-search-selected-bg: #ffea7f;
+  --cm-search-selected-color: #24292e;
 }
 
 .dark {
@@ -43,6 +63,26 @@
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
   --ring: 224.3 76.3% 48%;
+
+  /* CodeMirror 暗色主题变量 */
+  --cm-background: #0d1117;
+  --cm-color: #c9d1d9;
+  --cm-caret: #c9d1d9;
+  --cm-selection-bg: #388bfd33;
+  --cm-border: #30363d;
+  --cm-gutter-bg: #0d1117;
+  --cm-gutter-color: #484f58;
+  --cm-gutter-active-bg: #161b22;
+  --cm-gutter-active-color: #c9d1d9;
+  --cm-line-number-color: #8b949e;
+  --cm-active-line-bg: #161b22;
+  --cm-selection-match-bg: #388bfd33;
+  --cm-bracket-bg: #388bfd22;
+  --cm-bracket-color: #c9d1d9;
+  --cm-search-bg: #4d260033;
+  --cm-search-color: #c9d1d9;
+  --cm-search-selected-bg: #7d4a0044;
+  --cm-search-selected-color: #c9d1d9;
 }
 
 * {

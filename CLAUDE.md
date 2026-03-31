@@ -86,6 +86,18 @@
 - store 中不处理 toast / dialog 等 UI 副作用
 - 组件订阅 store 时必须精确选择 slice，避免整仓订阅
 
+### Layout 与视图模式
+- `Layout` 组件的 props 结构：`sidebar`、`editor`、`preview`、`toolbar`、`sidebarVisible`、`viewMode`、`statusBar`
+- **工具栏必须始终可见**：不要把 `EditorToolbar` 放在 `editor` slot 中，会被 `viewMode` 条件渲染隐藏
+- 视图显隐控制用 `flex-1` + `w-0 opacity-0 pointer-events-none`，不用百分比宽度
+- `ResizeHandle` 等 UI 组件必须定义在模块顶层（`memo` 包装），不能放在父组件内部
+
+### CodeMirror 编辑器
+- 使用 `useRef` 存储 EditorView 实例，`prevValueRef` 存储文档内容
+- **主题切换时**：必须先从 `view.state.doc.toString()` 读取内容，再销毁重建
+- **外部 value 变化时**：使用 `view.dispatch(transaction)` 而非重建视图
+- 初始化只在 `container` 首次可用时执行，不依赖 `value`
+
 ### Tauri / Rust
 - 前端禁止直接 `invoke()`，统一通过 `src/utils/tauri.ts`
 - Rust command 返回 `Result<T, String>`
@@ -181,7 +193,7 @@ pnpm build
 
 ## Current Status
 
-**更新日期**：2026-03-30（第五次更新 - 快捷键系统）
+**更新日期**：2026-03-31（第七次更新 - 视图切换与主题稳定性）
 
 项目已从纯文档状态推进到**MVP 核心功能基本完成阶段**。
 
@@ -227,9 +239,15 @@ pnpm build
 
 #### 性能优化 ✅（2026-03-30 第三次更新）
 - **文件树懒加载**：仅在用户展开目录时加载子节点
-- **黑名单过滤**：自动忽略 `node_modules`、`.git`、`target`、`dist` 等目录
+- **黑名单过滤**：自动忽略 `node_modules`、`.git`、`target`、`dist` 等目录（双端均实现）
 - **默认折叠状态**：避免一次性渲染大量 DOM 节点
 - **新增 Tauri 命令**：`read_dir_children` 按需加载子目录
+
+#### 视图与主题稳定性 ✅（2026-03-31 第七次更新）
+- **工具栏始终可见**：`EditorToolbar` 提取为 `Layout.toolbar` prop，不受 viewMode 影响
+- **视图切换正常**：`split`/`edit`/`preview` 三模式可自由切换
+- **主题切换不丢内容**：EditorView 销毁前直接读取 `view.state.doc.toString()`
+- **ResizeHandle 稳定**：提升为模块级 `memo` 组件
 
 当前已存在的关键内容：
 - 根配置：`package.json`、`tsconfig.json`、`vite.config.ts`、`tailwind.config.ts`、`postcss.config.js`、`eslint.config.js`
@@ -309,6 +327,13 @@ pnpm build
 - **光标丢失修复**：`MarkdownEditor.tsx` 使用 `useRef` 存储 EditorView 实例，避免因 `value` 变化而销毁重建视图。
 - **Transaction 更新**：外部 value 变化时使用 `view.dispatch()` 而非重建视图。
 - **分离 Theme 处理**：只有 theme 变化时才重建 EditorView。
+
+### 视图与主题修复（2026-03-31）
+- **工具栏被隐藏**：工具栏放在 `Layout` 的 `editor` slot 中，导致 `viewMode === 'preview'` 时工具栏随编辑器一起隐藏。解决：提取 `EditorToolbar` 为独立的 `toolbar` prop，始终渲染在 Layout 最外层。
+- **视图切换失效**：使用百分比宽度控制显隐在 flex 布局中不生效。解决：改用 `flex-1` + `w-0 opacity-0 pointer-events-none` 组合。
+- **主题切换内容丢失**：theme effect 依赖 `prevValueRef.current`，但该 ref 只在用户输入（`updateListener` 触发）时更新。解决：在销毁 EditorView **前**直接从 `view.state.doc.toString()` 读取当前内容。
+- **ResizeHandle 稳定性**：`ResizeHandle` 组件定义在 `Layout` 内部，每次渲染创建新函数引用。解决：提升为模块级 `memo` 组件。
+- **浏览器版黑名单**：`fsAdapter.ts` 的 `buildFileTreeFromHandle` 递归扫描时未过滤黑名单，导致浏览器版加载工作区极慢。解决：添加 `isIgnoredDirectory` 过滤。
 
 ---
 
