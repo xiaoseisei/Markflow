@@ -249,7 +249,7 @@ export const MarkdownEditor = memo(
     }, [container])
 
     /**
-     * 处理外部 value 变化（如切换标签）
+     * 处理外部 value 变化（如切换标签或首次加载）
      */
     useEffect(() => {
       const view = viewRef.current
@@ -257,10 +257,14 @@ export const MarkdownEditor = memo(
         return
       }
 
-      if (value === prevValueRef.current) {
+      // 比较时使用 EditorView 内的实际内容，而非可能过时的 ref
+      const currentContent = view.state.doc.toString()
+      if (value === currentContent) {
+        // 内容相同，无需更新
         return
       }
 
+      // 使用 transaction 替换整个文档
       const transaction = view.state.update({
         changes: {
           from: 0,
@@ -270,7 +274,11 @@ export const MarkdownEditor = memo(
       })
 
       view.dispatch(transaction)
+      // 同步 ref
       prevValueRef.current = view.state.doc.toString()
+
+      // 文件切换后自动聚焦
+      view.focus()
     }, [value])
 
     return <div className={cn('h-full min-h-0 overflow-hidden', className)} ref={setContainer} />

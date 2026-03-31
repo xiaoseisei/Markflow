@@ -406,6 +406,7 @@ function App(): JSX.Element {
           editor={
             <div className="flex-1 overflow-hidden">
               <MarkdownEditor
+                key={activeTab?.id}
                 ref={editorRef}
                 onChange={(content) => {
                   if (activeTab) {
