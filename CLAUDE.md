@@ -193,7 +193,7 @@ pnpm build
 
 ## Current Status
 
-**更新日期**：2026-03-31（第七次更新 - 视图切换与主题稳定性）
+**更新日期**：2026-03-31（第八次更新 - GitHub Pages 部署与 TypeScript 修复）
 
 项目已从纯文档状态推进到**MVP 核心功能基本完成阶段**。
 
@@ -248,6 +248,17 @@ pnpm build
 - **视图切换正常**：`split`/`edit`/`preview` 三模式可自由切换
 - **主题切换不丢内容**：EditorView 销毁前直接读取 `view.state.doc.toString()`
 - **ResizeHandle 稳定**：提升为模块级 `memo` 组件
+
+#### 拖拽性能优化 ✅（2026-03-31 第八次更新）
+- **节流阈值 33ms**：30fps 平衡丝滑度与性能
+- **GPU 加速**：`will-change: width` 启用复合层
+- **事件切断**：`pointer-events-none` + 透明遮罩层
+- **user-select 禁用**：防止拖拽时选中文本
+
+#### GitHub Pages 部署 ✅（2026-03-31）
+- **GitHub Actions 自动部署**：`.github/workflows/deploy.yml`
+- **部署地址**：https://xiaoseisei.github.io/Markflow/
+- **vite.config.ts base 配置**：使用 `./` 相对路径解决资源 404
 
 当前已存在的关键内容：
 - 根配置：`package.json`、`tsconfig.json`、`vite.config.ts`、`tailwind.config.ts`、`postcss.config.js`、`eslint.config.js`
@@ -335,6 +346,15 @@ pnpm build
 - **ResizeHandle 稳定性**：`ResizeHandle` 组件定义在 `Layout` 内部，每次渲染创建新函数引用。解决：提升为模块级 `memo` 组件。
 - **浏览器版黑名单**：`fsAdapter.ts` 的 `buildFileTreeFromHandle` 递归扫描时未过滤黑名单，导致浏览器版加载工作区极慢。解决：添加 `isIgnoredDirectory` 过滤。
 
+### TypeScript 错误修复（2026-03-31）
+- **ExportConfig 类型冲突**：`handleExport` 参数类型与 `exportDocument` 不匹配。解决：导入 `ExportConfig` 类型并统一使用。
+- **测试文件未使用变量**：删除 `vi`、`container`、`beforeEach`、`result` 等未使用变量。
+- **checked 属性类型错误**：`checkboxes[0]?.checked` 在 Element 类型上不存在。解决：使用 `(checkboxes[0] as HTMLInputElement)?.checked`。
+- **cn.test.ts 始终为假**：`null && expression` 被 TS 认为是始终为假。解决：使用 `as any` 类型断言。
+
+### GitHub Pages 部署问题（2026-03-31）
+- **资源 404**：`base: '/Markflow/'` 生成绝对路径，GitHub Pages 无法正确加载。解决：改为 `base: './'` 相对路径。
+
 ---
 
 ## Next Steps
@@ -345,6 +365,7 @@ pnpm build
 - [ ] 测试桌面版文件操作：验证 Tauri dialog 插件正常工作
 - [x] 添加编辑器工具栏按钮（加粗、斜体、标题等）✅
 - [x] 实现快捷键系统（文件操作、格式化、视图切换）✅
+- [x] GitHub Pages 部署 ✅
 
 ### 中期（功能完善）
 - [ ] 接入文件监听实现外部变更刷新（桌面版）
@@ -354,6 +375,5 @@ pnpm build
 
 ### 长期（架构优化）
 - [ ] 继续扩充测试覆盖，优先覆盖 `store`、`utils`、关键 Tauri commands
-- [ ] 网页版部署到 GitHub Pages
 - [ ] Safari/Firefox 浏览器降级方案
 - [ ] 性能优化：大文件处理、代码分割
