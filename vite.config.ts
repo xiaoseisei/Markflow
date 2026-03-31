@@ -4,7 +4,7 @@ import path from 'node:path'
 
 export default defineConfig({
   // GitHub Pages 部署路径：/Markflow/
-  base: '/Markflow/',
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {
